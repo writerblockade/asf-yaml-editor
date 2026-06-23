@@ -31,3 +31,12 @@ first.
 > This is a copy spun off from the parent "ASF Infra Tooling" project (which also
 > holds two unrelated tools: a CRA reporting calculator and a SECURITY-policy
 > checker). Nothing was deleted from the parent in making this copy.
+
+## A personal note
+
+*This part is unrelated to the tool and the Apache Software Foundation.* My sister
+Brianna is going through treatment and recovery for cancer. The best way to
+support me in this project is to support my sister. If you're able to provide
+financial help, go to
+[Team Bri: Joining Bri on her Healing Journey](https://www.gofundme.com/f/team-bri-joining-bri-on-her-healing-journey)
+on GoFundMe. Obviously this is entirely optional. Thank you for reading!
