@@ -1,0 +1,41 @@
+# EXPECTED: PASS
+# Fuller config: project metadata + policy, review-based branch protection
+# (NO required_status_checks contexts/checks, so no lockout warning), and a
+# valid merge-button block. Every value is within the live schema.
+project:
+  metadata:
+    key:       tooling-trusted-releases
+    committee: tooling
+    name:      Apache Trusted Releases
+    homepage:  https://tooling.apache.org/trusted-releases.html
+  policy:
+    vote_mode:          email
+    min_hours:          72
+    license_check_mode: RAT
+
+notifications:
+  commits:      commits@tooling.apache.org
+  issues:       issues@tooling.apache.org
+  pullrequests: issues@tooling.apache.org
+
+github:
+  description: A platform for making official ASF software releases.
+  homepage:    https://tooling.apache.org/trusted-releases.html
+  labels:
+    - releases
+    - apache
+  collaborators:
+    - Humbedooh
+    - gstein
+  enabled_merge_buttons:
+    squash:                true
+    squash_commit_message: PR_TITLE
+    merge:                 false
+    rebase:                false
+  protected_branches:
+    main:
+      required_pull_request_reviews:
+        dismiss_stale_reviews:           true
+        required_approving_review_count: 2
+      required_signatures: true
+      required_conversation_resolution: true

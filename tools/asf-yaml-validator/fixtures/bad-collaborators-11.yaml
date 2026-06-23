@@ -1,0 +1,15 @@
+# EXPECTED: FAIL (>10)
+# A repository may have at most 10 active collaborators. This list has 11.
+github:
+  collaborators:
+    - user01
+    - user02
+    - user03
+    - user04
+    - user05
+    - user06
+    - user07
+    - user08
+    - user09
+    - user10
+    - user11

@@ -1,0 +1,5 @@
+# EXPECTED: WARN
+# A staging block without a `whoami` will not run (the website server needs the
+# whoami to match the branch). Valid YAML, so a WARN rather than a FAIL.
+staging:
+  profile: ~

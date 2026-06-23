@@ -1,0 +1,8 @@
+# EXPECTED: FAIL (enum)
+# policy.vote_mode must be one of manual | email | trusted. "quick" is invalid.
+project:
+  metadata:
+    key:       tooling-trusted-releases
+    committee: tooling
+  policy:
+    vote_mode: quick

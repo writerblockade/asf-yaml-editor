@@ -1,0 +1,6 @@
+# EXPECTED: WARN (unknown top-level key)
+# The classic typo: "notifcations" instead of "notifications". Because the
+# schema is a work in progress, an unknown top-level key is a WARN, never a
+# FAIL — but this one almost certainly means the real block is being ignored.
+notifcations:
+  commits: commits@foo.apache.org

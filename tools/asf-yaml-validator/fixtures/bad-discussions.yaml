@@ -1,0 +1,11 @@
+# EXPECTED: FAIL
+# Enabling GitHub discussions requires a notifications.discussions target.
+# Here discussions is on but no such target is given.
+notifications:
+  commits: commits@foo.apache.org
+  issues:  issues@foo.apache.org
+
+github:
+  features:
+    issues:      true
+    discussions: true

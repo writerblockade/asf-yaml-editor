@@ -1,0 +1,24 @@
+# EXPECTED: PASS
+# GitHub ruleset for default branch protection (convenience syntax).
+# Mirrors apache/infrastructure-github-merge-queue-notifier#1: protect the default
+# branch plus release/* and rel/*, restrict deletion & force-push, and require one
+# PR review. Convenience syntax only (no raw-payload keys), so asfyaml hardcodes
+# enforcement: active.
+github:
+  rulesets:
+    - name: "Default Branch Protection"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          - "release/*"
+          - "rel/*"
+        excludes: []
+      bypass_teams:
+        - root
+      restrict_deletion: true
+      restrict_force_push: true
+      required_pull_request_reviews:
+        dismiss_stale_reviews: true
+        require_last_push_approval: false
+        required_approving_review_count: 1

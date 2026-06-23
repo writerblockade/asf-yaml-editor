@@ -1,0 +1,359 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/REPLACE_ME/asf-yaml-schema/main/asf-yaml.schema.json",
+  "title": ".asf.yaml",
+  "description": "Apache Software Foundation per-repository configuration file (.asf.yaml). Drafted from the public documentation at https://github.com/apache/infrastructure-asfyaml (snapshot 2026-06-19). STRUCTURAL validation only: it checks key names, types, and allowed values. Cross-field and policy rules (e.g. the branch-protection lockout, vote_mode vs manual_vote, 'discussions needs a notification target') are NOT expressible in JSON Schema and are handled by the companion Lint Catcher tool. The authoritative interpreter (asfyaml.py) is non-public, so treat unknown-key errors as 'likely a typo' rather than 'definitely invalid'.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "project": { "$ref": "#/$defs/project" },
+    "notifications": { "$ref": "#/$defs/notifications" },
+    "staging": { "$ref": "#/$defs/staging" },
+    "publish": { "$ref": "#/$defs/publish" },
+    "pelican": { "$ref": "#/$defs/pelican" },
+    "jekyll": { "$ref": "#/$defs/jekyll" },
+    "github": { "$ref": "#/$defs/github" },
+    "jenkins": { "$ref": "#/$defs/jenkins" }
+  },
+  "$defs": {
+    "emailTarget": {
+      "type": "string",
+      "description": "A mailing-list or notification email address (or space-separated options for jira_options)."
+    },
+    "recipients": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "to": { "type": "string" },
+        "cc": { "type": "array", "items": { "type": "string" } },
+        "bcc": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Project metadata, release policy, and ATR features.",
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["key", "committee"],
+          "description": "DOAP-like project metadata. 'key' and 'committee' are required when a metadata block is present; 'committee' must be the prefix of the repository name (checked by Lint Catcher, not here).",
+          "properties": {
+            "key": { "type": "string" },
+            "committee": { "type": "string" },
+            "name": { "type": "string" },
+            "description": { "type": "string" },
+            "short_description": { "type": "string" },
+            "homepage": { "type": "string" },
+            "lifecycle_page": { "type": "string" },
+            "download_page": { "type": "string" },
+            "bug_database": { "type": "string" },
+            "mailing_lists": { "type": "string" },
+            "doap": { "type": "string", "description": "HTTPS URL to a DOAP file under apache.org or raw.githubusercontent.com/apache (domain rule checked by Lint Catcher)." },
+            "repositories": { "type": "array", "items": { "type": "string" } },
+            "standards": { "type": "array", "items": { "type": "string" } },
+            "categories": { "type": "array", "items": { "type": "string" } },
+            "programming_languages": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "How ATR runs releases, votes and announcements. Every field is optional.",
+          "properties": {
+            "vote_mode": { "enum": ["manual", "email", "trusted"], "description": "Mutually exclusive with manual_vote (checked by Lint Catcher)." },
+            "manual_vote": { "type": "boolean" },
+            "min_hours": { "type": "integer", "minimum": 0 },
+            "license_check_mode": { "enum": ["Both", "Lightweight", "RAT"] },
+            "preserve_download_files": { "type": "boolean" },
+            "source_artifact_paths": { "type": "array", "items": { "type": "string" } },
+            "binary_artifact_paths": { "type": "array", "items": { "type": "string" } },
+            "source_excludes_lightweight": { "type": "array", "items": { "type": "string" } },
+            "source_excludes_rat": { "type": "array", "items": { "type": "string" } },
+            "file_tag_mappings": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } } },
+            "release_checklist": { "type": "string" },
+            "start_vote_subject": { "type": "string" },
+            "start_vote_template": { "type": "string" },
+            "vote_comment_template": { "type": "string" },
+            "finish_vote_template": { "type": "string" },
+            "announce_release_subject": { "type": "string" },
+            "announce_release_template": { "type": "string" },
+            "github_repository_name": { "type": "string" },
+            "github_repository_branch": { "type": "string" },
+            "github_compose_workflow_path": { "type": "array", "items": { "type": "string" } },
+            "github_vote_workflow_path": { "type": "array", "items": { "type": "string" } },
+            "github_finish_workflow_path": { "type": "array", "items": { "type": "string" } },
+            "vote_recipients": { "$ref": "#/$defs/recipients" },
+            "announce_recipients": { "$ref": "#/$defs/recipients" }
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "atr_sync": { "type": "boolean" } }
+        }
+      }
+    },
+    "notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Where commit / issue / PR / job / discussion emails are sent. Only valid in the default branch.",
+      "properties": {
+        "commits": { "$ref": "#/$defs/emailTarget" },
+        "commits_by_path": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          }
+        },
+        "issues": { "$ref": "#/$defs/emailTarget" },
+        "issues_status": { "$ref": "#/$defs/emailTarget" },
+        "issues_comment": { "$ref": "#/$defs/emailTarget" },
+        "pullrequests": { "$ref": "#/$defs/emailTarget" },
+        "pullrequests_status": { "$ref": "#/$defs/emailTarget" },
+        "pullrequests_comment": { "$ref": "#/$defs/emailTarget" },
+        "jira_options": { "type": "string", "description": "Space-separated subset of: comment worklog label link." },
+        "jobs": { "$ref": "#/$defs/emailTarget" },
+        "discussions": { "$ref": "#/$defs/emailTarget" }
+      },
+      "patternProperties": {
+        "^(pullrequests|issues)_bot_.+$": { "$ref": "#/$defs/emailTarget" }
+      }
+    },
+    "staging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "type": ["string", "null"] },
+        "whoami": { "type": "string" },
+        "autostage": { "type": "string", "description": "Must be of the form '$foo/*' (e.g. 'site/*')." }
+      }
+    },
+    "publish": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "whoami": { "type": "string" },
+        "hostname": { "type": "string" },
+        "subdir": { "type": "string" },
+        "type": { "type": "string", "description": "e.g. 'blog' to deploy a project blog." }
+      }
+    },
+    "pelican": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "whoami": { "type": "string" },
+        "target": { "type": "string" },
+        "autobuild": { "type": "string" },
+        "notify": { "type": "string" },
+        "theme": { "type": "string" },
+        "minimum_page_count": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "jekyll": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "whoami": { "type": "string" },
+        "target": { "type": "string" },
+        "outputdir": { "type": "string" }
+      }
+    },
+    "branchProtection": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Branch protection for one branch. An empty mapping {} protects the branch with no extra rules.",
+      "properties": {
+        "required_status_checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "strict": { "type": "boolean" },
+            "contexts": { "type": ["array", "null"], "items": { "type": "string" }, "description": "Required check names. NOT validated by ASF — a typo here can lock you out of editing .asf.yaml (flagged by Lint Catcher)." },
+            "checks": {
+              "type": ["array", "null"],
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "context": { "type": "string" },
+                  "app_id": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "required_pull_request_reviews": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "dismiss_stale_reviews": { "type": "boolean" },
+            "require_last_push_approval": { "type": "boolean" },
+            "require_code_owner_reviews": { "type": "boolean" },
+            "required_approving_review_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "required_signatures": { "type": "boolean" },
+        "required_linear_history": { "type": "boolean" },
+        "required_conversation_resolution": { "type": "boolean" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required_reviewers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": ["string", "integer"] },
+              "type": { "enum": ["User", "Team"] }
+            }
+          }
+        },
+        "wait_timer": { "type": "integer", "minimum": 0 },
+        "prevent_self_review": { "type": "boolean" },
+        "deployment_branch_policy": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "properties": {
+            "protected_branches": { "type": "boolean" },
+            "policies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": { "type": "string" },
+                  "type": { "enum": ["branch", "tag"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "GitHub repository settings applied by ASF infrastructure.",
+      "properties": {
+        "collaborators": { "type": "array", "items": { "type": "string" }, "maxItems": 10, "description": "External (non-committer) triage collaborators. Max 10." },
+        "autolink_jira": {
+          "oneOf": [
+            { "type": "string", "pattern": "^[A-Z]+$" },
+            { "type": "array", "items": { "type": "string", "pattern": "^[A-Z]+$" } }
+          ]
+        },
+        "protected_branches": {
+          "type": ["object", "null"],
+          "additionalProperties": { "$ref": "#/$defs/branchProtection" }
+        },
+        "custom_subjects": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "new_pr": { "type": "string" },
+            "close_pr": { "type": "string" },
+            "comment_pr": { "type": "string" },
+            "merge_pr": { "type": "string" },
+            "diffcomment": { "type": "string" },
+            "new_issue": { "type": "string" },
+            "comment_issue": { "type": "string" },
+            "close_issue": { "type": "string" },
+            "catchall": { "type": "string" },
+            "catchall_discussions": { "type": "string" },
+            "new_discussion": { "type": "string" },
+            "edit_discussion": { "type": "string" },
+            "close_discussion": { "type": "string" },
+            "close_discussion_with_comment": { "type": "string" },
+            "reopen_discussion": { "type": "string" },
+            "new_comment_discussion": { "type": "string" },
+            "edit_comment_discussion": { "type": "string" },
+            "delete_comment_discussion": { "type": "string" }
+          }
+        },
+        "del_branch_on_merge": { "type": "boolean", "deprecated": true, "description": "Deprecated. Use pull_requests.del_branch_on_merge." },
+        "dependabot_alerts": { "type": "boolean" },
+        "dependabot_updates": { "type": "boolean" },
+        "ghp_branch": { "type": "string", "description": "Must be the default branch or 'gh-pages'." },
+        "ghp_path": { "enum": ["/docs", "/"] },
+        "pull_requests": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allow_auto_merge": { "type": "boolean" },
+            "allow_update_branch": { "type": "boolean" },
+            "del_branch_on_merge": { "type": "boolean" }
+          }
+        },
+        "copilot_code_review": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "review_drafts": { "type": "boolean" },
+            "review_on_push": { "type": "boolean" }
+          }
+        },
+        "rulesets": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "description": "Convenience or raw-payload ruleset. Mixing the two styles in one entry is flagged by Lint Catcher.",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "enum": ["branch", "tag"] },
+              "target": { "enum": ["branch", "tag"] }
+            }
+          }
+        },
+        "enabled_merge_buttons": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "At least one of squash/merge/rebase must be true (checked by Lint Catcher).",
+          "properties": {
+            "squash": { "type": "boolean" },
+            "squash_commit_message": { "enum": ["DEFAULT", "PR_TITLE", "PR_TITLE_AND_COMMIT_DETAILS", "PR_TITLE_AND_DESC"] },
+            "merge": { "type": "boolean" },
+            "merge_commit_message": { "enum": ["DEFAULT", "PR_TITLE", "PR_TITLE_AND_DESC"] },
+            "rebase": { "type": "boolean" }
+          }
+        },
+        "features": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wiki": { "type": "boolean" },
+            "issues": { "type": "boolean" },
+            "projects": { "type": "boolean" },
+            "discussions": { "type": "boolean" }
+          }
+        },
+        "description": { "type": "string" },
+        "homepage": { "type": "string" },
+        "labels": { "type": "array", "items": { "type": "string" }, "maxItems": 20 },
+        "protected_tags": { "type": "array", "items": { "type": "string" }, "deprecated": true, "description": "Deprecated by GitHub (Feb 2024). Use rulesets with type: tag." },
+        "environments": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/environment" }
+        }
+      }
+    },
+    "jenkins": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "github_whitelist": { "type": "array", "items": { "type": "string" }, "deprecated": true, "description": "Deprecated / no longer functional." }
+      }
+    }
+  }
+}

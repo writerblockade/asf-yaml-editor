@@ -1,0 +1,51 @@
+[
+  {
+    "id": "emit-good-basic",
+    "note": "notifications + publish.whoami",
+    "expectVerdict": "PASS",
+    "model": {
+      "notifications": { "commits": "commits@foo.apache.org", "issues": "issues@foo.apache.org", "pullrequests": "issues@foo.apache.org" },
+      "publish": { "whoami": "asf-site" }
+    }
+  },
+  {
+    "id": "emit-merge-ok",
+    "note": "one merge button + valid commit-message enum",
+    "expectVerdict": "PASS",
+    "model": {
+      "github": { "enabled_merge_buttons": { "squash": true, "squash_commit_message": "PR_TITLE", "merge": false, "rebase": false } }
+    }
+  },
+  {
+    "id": "emit-policy-good",
+    "note": "project metadata + policy enums",
+    "expectVerdict": "PASS",
+    "model": {
+      "project": { "metadata": { "key": "tooling-trusted-releases", "committee": "tooling" }, "policy": { "vote_mode": "email", "min_hours": 72, "license_check_mode": "RAT" } }
+    }
+  },
+  {
+    "id": "emit-merge-none",
+    "note": "no merge button enabled",
+    "expectVerdict": "FAIL",
+    "model": {
+      "github": { "enabled_merge_buttons": { "squash": false, "merge": false, "rebase": false } }
+    }
+  },
+  {
+    "id": "emit-discussions-no-target",
+    "note": "discussions on, no notif target",
+    "expectVerdict": "FAIL",
+    "model": {
+      "github": { "features": { "issues": true, "discussions": true } }
+    }
+  },
+  {
+    "id": "emit-lockout",
+    "note": "default-branch required contexts",
+    "expectVerdict": "WARN",
+    "model": {
+      "github": { "protected_branches": { "main": { "required_status_checks": { "strict": true, "contexts": ["gh-infra/jenkins", "build-and-test"] } } } }
+    }
+  }
+]

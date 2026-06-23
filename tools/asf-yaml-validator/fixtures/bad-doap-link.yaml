@@ -1,0 +1,8 @@
+# EXPECTED: FAIL (https + domain)
+# project.metadata.doap must use https AND live under apache.org or
+# raw.githubusercontent.com/apache. This link is http and an arbitrary domain.
+project:
+  metadata:
+    key:       tooling-trusted-releases
+    committee: tooling
+    doap:      http://evil.com/doap.rdf

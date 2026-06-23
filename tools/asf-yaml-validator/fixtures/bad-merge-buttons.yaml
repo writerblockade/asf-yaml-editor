@@ -1,0 +1,8 @@
+# EXPECTED: FAIL
+# At least one of squash / merge / rebase must be true. Here all are false,
+# which would disable merging entirely.
+github:
+  enabled_merge_buttons:
+    squash: false
+    merge:  false
+    rebase: false

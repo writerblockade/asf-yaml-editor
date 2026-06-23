@@ -1,0 +1,7 @@
+# EXPECTED: PASS
+# `meta` is a valid top-level section (selects the .asf.yaml environment).
+# See docs/ASFYamlFeature.md. A mapping with environment/environments is fine.
+meta:
+  environment: beta
+notifications:
+  commits: commits@foo.apache.org

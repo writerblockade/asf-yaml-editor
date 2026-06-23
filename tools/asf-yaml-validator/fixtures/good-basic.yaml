@@ -1,0 +1,10 @@
+# EXPECTED: PASS
+# A minimal, valid .asf.yaml: notification targets plus a publish block
+# that correctly carries a `whoami`. Nothing here should warn or fail.
+notifications:
+  commits:      commits@foo.apache.org
+  issues:       issues@foo.apache.org
+  pullrequests: issues@foo.apache.org
+
+publish:
+  whoami: asf-site

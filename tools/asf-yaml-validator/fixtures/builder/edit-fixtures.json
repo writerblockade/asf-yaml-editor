@@ -1,0 +1,42 @@
+[
+  {
+    "id": "edit-ruleset-includes",
+    "kind": "edit",
+    "note": "add convenience ruleset + branch includes/excludes (the reported bug: editing anything nested under the rulesets array used to convert the array into an index-keyed object)",
+    "start": {},
+    "ops": [
+      { "op": "set", "path": ["github", "rulesets"], "value": [ { "name": "", "type": "branch" } ] },
+      { "op": "set", "path": ["github", "rulesets", 0, "name"], "value": "Default Branch Protection" },
+      { "op": "set", "path": ["github", "rulesets", 0, "branches", "includes"], "value": ["~DEFAULT_BRANCH"] },
+      { "op": "set", "path": ["github", "rulesets", 0, "branches", "includes"], "value": ["~DEFAULT_BRANCH", "release/*"] },
+      { "op": "set", "path": ["github", "rulesets", 0, "branches", "excludes"], "value": [] },
+      { "op": "set", "path": ["github", "rulesets", 0, "restrict_force_push"], "value": true }
+    ],
+    "expect": {
+      "github": { "rulesets": [ {
+        "name": "Default Branch Protection", "type": "branch",
+        "branches": { "includes": ["~DEFAULT_BRANCH", "release/*"], "excludes": [] },
+        "restrict_force_push": true
+      } ] }
+    }
+  },
+  {
+    "id": "edit-ruleset-tag-and-checks",
+    "kind": "edit",
+    "note": "tag ruleset + a required_status_checks listgroup nested two array-levels deep under rulesets, then a delete that should prune the now-empty branches map",
+    "start": {},
+    "ops": [
+      { "op": "set", "path": ["github", "rulesets"], "value": [ { "name": "Release tags", "type": "tag" } ] },
+      { "op": "set", "path": ["github", "rulesets", 0, "branches", "includes"], "value": ["v*.*.*"] },
+      { "op": "set", "path": ["github", "rulesets", 0, "required_status_checks"], "value": [ {} ] },
+      { "op": "set", "path": ["github", "rulesets", 0, "required_status_checks", 0, "name"], "value": "build-and-test" },
+      { "op": "del", "path": ["github", "rulesets", 0, "branches", "includes"] }
+    ],
+    "expect": {
+      "github": { "rulesets": [ {
+        "name": "Release tags", "type": "tag",
+        "required_status_checks": [ { "name": "build-and-test" } ]
+      } ] }
+    }
+  }
+]

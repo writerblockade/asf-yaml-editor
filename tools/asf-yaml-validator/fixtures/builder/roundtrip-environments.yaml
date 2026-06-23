@@ -1,0 +1,23 @@
+# ROUNDTRIP: nested environments with reviewers and deployment branch policies.
+github:
+  environments:
+    pypi:
+      required_reviewers:
+        - id: 12345
+          type: User
+        - id: release-managers
+          type: Team
+      wait_timer: 5
+      prevent_self_review: true
+      deployment_branch_policy:
+        protected_branches: false
+        policies:
+          - name: main
+            type: branch
+          - name: "1.2.0"
+            type: tag
+          - name: "release/*"
+    test-pypi:
+      wait_timer: 60
+      deployment_branch_policy:
+        protected_branches: true

@@ -1,0 +1,4 @@
+# EXPECTED: FAIL (meta must be a mapping)
+# `meta` must be a mapping (meta.environment string or meta.environments list),
+# not a bare scalar.
+meta: production

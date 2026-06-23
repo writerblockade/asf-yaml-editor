@@ -1,0 +1,17 @@
+# ROUNDTRIP: custom_subjects map + commits_by_path with list values + bot scheme.
+notifications:
+  commits: commits@foo.apache.org
+  commits_by_path:
+    "sub-folder/*": foo@bar.apache.org
+    "docs/README.md":
+      - foo@bar.apache.org
+      - janedoe@apache.org
+  pullrequests_bot_dependabot: private@foo.apache.org
+github:
+  custom_subjects:
+    new_pr: "[PR] {title} ({repository})"
+    close_pr: "Re: [PR] {title} ({repository})"
+    comment_pr: "Re: [PR] {title} ({repository})"
+    new_issue: "[I] {title} ({repository})"
+    catchall: "[GH] {title} ({repository})"
+    catchall_discussions: "[D] {title} ({repository})"

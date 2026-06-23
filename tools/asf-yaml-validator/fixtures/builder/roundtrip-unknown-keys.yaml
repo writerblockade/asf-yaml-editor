@@ -1,0 +1,14 @@
+# ROUNDTRIP: an unknown top-level key AND an unknown sub-key inside a known block.
+# Both must round-trip verbatim (nothing silently dropped by the builder).
+some_future_top_level:
+  enabled: true
+  options:
+    - a
+    - b
+notifications:
+  commits: commits@foo.apache.org
+github:
+  description: Example
+  some_future_github_key:
+    nested: value
+    count: 3

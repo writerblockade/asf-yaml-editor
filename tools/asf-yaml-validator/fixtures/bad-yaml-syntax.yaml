@@ -1,0 +1,5 @@
+# EXPECTED: FAIL (parse)
+# An unclosed YAML flow sequence — js-yaml cannot parse this, so the tool
+# must stop at the parse stage and report a syntax error (with line/col).
+github:
+  collaborators: [Humbedooh, gstein

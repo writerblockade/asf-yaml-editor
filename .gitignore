@@ -1,0 +1,23 @@
+# macOS / OS cruft
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Node / verify tooling (if any scripts ever add these)
+node_modules/
+npm-debug.log*
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# Non-tool resources — kept locally, intentionally not shipped in this repo
+# Vendored icon libraries (feather + tabler), ~26 MB / 6,438 files
+assets/
+# Design docs + UI sketches (BESPOKE-SVG-SPEC.md, *.jpg)
+design/
+# Tool's brand mark SVGs (not loaded at runtime; index.html is self-contained)
+tools/asf-yaml-validator/brand/
+# UI design guidance (the functional build specs in docs/ are kept)
+docs/ui-guidance.md

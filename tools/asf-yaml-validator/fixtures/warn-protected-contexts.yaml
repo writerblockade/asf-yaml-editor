@@ -1,0 +1,12 @@
+# EXPECTED: WARN (lockout)
+# Setting required_status_checks.contexts on the DEFAULT branch is the classic
+# footgun: a typo in a check name "will prevent you from modifying the
+# .asf.yaml file itself." Valid schema, so this is a WARN, not a FAIL.
+github:
+  protected_branches:
+    main:
+      required_status_checks:
+        strict: true
+        contexts:
+          - gh-infra/jenkins
+          - another/build-that-must-pass

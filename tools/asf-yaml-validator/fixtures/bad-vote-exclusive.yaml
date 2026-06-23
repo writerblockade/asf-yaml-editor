@@ -1,0 +1,9 @@
+# EXPECTED: FAIL (mutually exclusive)
+# policy.vote_mode and policy.manual_vote cannot both be set.
+project:
+  metadata:
+    key:       tooling-trusted-releases
+    committee: tooling
+  policy:
+    vote_mode:   email
+    manual_vote: true

@@ -1,0 +1,9 @@
+# EXPECTED: WARN (deprecated)
+# github.protected_tags was sunset by GitHub in Feb 2024 and is no longer
+# applied by .asf.yaml. It still parses, so this is a deprecation WARN.
+github:
+  protected_tags:
+    - "rel/*"
+    - "v*.*.*"
+  enabled_merge_buttons:
+    squash: true
