@@ -74,9 +74,9 @@
   /* green Add segment: flush by default; a taller raised block (poking above/below the line) when the form is empty */
   .buildbar #addSectionHost{height:auto;align-self:center}
   .buildbar #addSectionHost .cat{height:auto}
-  .buildbar #addSectionHost .catbtn{height:34px;justify-content:center;background:var(--pass);color:#fff;font-weight:500;padding:0 16px;border-radius:0;
+  .buildbar #addSectionHost .catbtn{height:34px;justify-content:center;background:#1a7f37;color:#fff;font-weight:500;padding:0 16px;border-radius:0;
     transition:height .45s cubic-bezier(.4,0,.2,1),border-radius .45s ease,font-size .3s ease}
-  .buildbar #addSectionHost .catbtn:hover{background:#36b34d;color:#fff}
+  .buildbar #addSectionHost .catbtn:hover{background:#1a7a35;color:#fff}
   .buildbar #addSectionHost.firstadd{border-left:0}                     /* raised CTA: drop the dividers hugging it */
   .buildbar #addSectionHost.firstadd+*{border-left:0}
   .buildbar #addSectionHost.firstadd .catbtn{height:58px;font-size:15px;border-radius:11px}   /* raised = rounded standalone button; morphs to square/flush on first add */
@@ -417,7 +417,13 @@
   var LICENSE_MODES = ["Both","Lightweight","RAT"];
   var SQUASH_MSG = ["DEFAULT","PR_TITLE","PR_TITLE_AND_COMMIT_DETAILS","PR_TITLE_AND_DESC"];
   var MERGE_MSG  = ["DEFAULT","PR_TITLE","PR_TITLE_AND_DESC"];
+  var GHP_PATHS = ["/docs","/"];
   var DEFAULTISH = ["main","master","trunk"];
+  // Ruleset style keys — the SINGLE source for both the engine's mixed-style
+  // check (lintAsfYaml) and the Builder's convenience/raw mode detection
+  // (renderRulesets reads these via window.ASFYAML). Keep exactly one copy.
+  var RULESET_RAW_KEYS  = ["target","conditions","rules","bypass_actors"];
+  var RULESET_CONV_KEYS = ["branches","bypass_teams","restrict_deletion","restrict_force_push","type"];
 
   function isPlainObject(v){ return v !== null && typeof v === "object" && !Array.isArray(v) && !(v instanceof Date); }
   function has(o,k){ return isPlainObject(o) && Object.prototype.hasOwnProperty.call(o,k); }
@@ -447,6 +453,8 @@
     if (!isPlainObject(doc)){ add("FAIL","root-type","The top level of an .asf.yaml must be a mapping (key: value blocks), but this parsed as a " + (Array.isArray(doc) ? "list" : typeof doc) + ".","asfyaml schema"); return finalize(findings,false); }
 
     add("PASS","parse","Parsed as valid YAML.","js-yaml 4.1.0");
+
+    lintYaml11Bools(text, add);
 
     Object.keys(doc).forEach(function(k){
       if (KNOWN_TOP.indexOf(k) === -1){
@@ -557,7 +565,7 @@
           }
         }
         if (has(gh,"ghp_path")){
-          if (gh.ghp_path !== "/docs" && gh.ghp_path !== "/"){ add("FAIL","ghp-path","github.ghp_path must be “/docs” or “/”; got “" + gh.ghp_path + "”.","asfyaml schema · GitHub Pages"); }
+          if (GHP_PATHS.indexOf(gh.ghp_path) === -1){ add("FAIL","ghp-path","github.ghp_path must be “/docs” or “/”; got “" + gh.ghp_path + "”.","asfyaml schema · GitHub Pages"); }
         }
         if (has(gh,"ghp_branch")){
           var gb = gh.ghp_branch;
@@ -578,8 +586,8 @@
             if (!isPlainObject(rs)) return;
             if (!has(rs,"name")){ add("WARN","ruleset-name","github.rulesets entry #" + (i+1) + " has no “name”; name is the reconciliation key and should be unique.","asfyaml schema · Rulesets"); }
             else { if (seenNames[rs.name]) add("WARN","ruleset-name","github.rulesets has a duplicate name “" + rs.name + "”; names must be unique.","asfyaml schema · Rulesets"); seenNames[rs.name] = true; }
-            var convKeys = ["branches","bypass_teams","restrict_deletion","restrict_force_push","type"];
-            var rawKeys  = ["target","conditions","rules","bypass_actors"];
+            var convKeys = RULESET_CONV_KEYS;
+            var rawKeys  = RULESET_RAW_KEYS;
             var hasConv = convKeys.some(function(k){ return has(rs,k); });
             var hasRaw  = rawKeys.some(function(k){ return has(rs,k); });
             if (hasConv && hasRaw){ add("FAIL","ruleset-mixed","github.rulesets entry “" + (rs.name||("#"+(i+1))) + "” mixes convenience-syntax keys and raw-payload keys; each entry must use exactly one style.","asfyaml schema · Rulesets"); }
@@ -594,6 +602,13 @@
     if (has(doc,"jenkins")){ add("WARN","deprecated-jenkins","The jenkins / github_whitelist feature is deprecated and no longer works (the underlying Jenkins plugin was removed).","asfyaml schema · Jenkins PR whitelisting (deprecated)"); }
 
     if (has(doc,"meta") && !isPlainObject(doc.meta)){ add("FAIL","meta-type","“meta” must be a mapping — it selects the .asf.yaml environment via meta.environment (a string) or meta.environments (a list).","asfyaml docs · meta / ASFYamlFeature"); }
+
+    if (has(doc,"pelican") && isPlainObject(doc.pelican) && has(doc.pelican,"autobuild")){
+      var ab = doc.pelican.autobuild;
+      if (typeof ab !== "string" || !/^[^\/\s]+\/\*$/.test(ab)){ add("WARN","autobuild-format","pelican.autobuild must be of the form “$foo/*” (e.g. “site/*”); got “" + ab + "”.","asfyaml schema · Automatically building new branches"); }
+    }
+
+    lintUnknownSubkeys(doc, add);
 
     return finalize(findings,true);
   }
@@ -612,6 +627,72 @@
   }
 
   function isDefaultBranch(branch, declaredDefault){ if (declaredDefault) return branch === declaredDefault; return DEFAULTISH.indexOf(branch) !== -1; }
+
+  // YAML 1.1 vs 1.2 footgun. This tool parses with js-yaml (YAML 1.2 core schema),
+  // where only true/false are booleans and yes/no/on/off are STRINGS. ASF applies
+  // .asf.yaml with a Python (YAML 1.1) parser, where yes/Yes/YES/on/On/ON are the
+  // boolean true and no/No/NO/off/Off/OFF are false. (Bare single y/Y/n/N are NOT
+  // booleans in the common Python loaders, so they're excluded to avoid false
+  // alarms.) A bare token here can therefore mean a string to this tool but a
+  // boolean to the server — so flag every UNQUOTED occurrence as a WARN. The scan
+  // is raw-text + quote-aware on purpose: `squash: "yes"` (quoted) is a string in
+  // BOTH versions, so it is left alone. Report-only; we never rewrite the value.
+  var Y11_TRUE  = { yes:1, Yes:1, YES:1, on:1, On:1, ON:1 };
+  var Y11_FALSE = { no:1, No:1, NO:1, off:1, Off:1, OFF:1 };
+  function lintYaml11Bools(text, add){
+    var kvRe   = /^\s*(?:- +)?([^:#\n]+?):[ \t]+(yes|Yes|YES|no|No|NO|on|On|ON|off|Off|OFF)[ \t]*(?:#.*)?$/;
+    var itemRe = /^\s*-[ \t]+(yes|Yes|YES|no|No|NO|on|On|ON|off|Off|OFF)[ \t]*(?:#.*)?$/;
+    String(text).split(/\r?\n/).forEach(function(line){
+      var key=null, tok=null, m;
+      if ((m = kvRe.exec(line)))        { key = m[1].trim(); tok = m[2]; }
+      else if ((m = itemRe.exec(line))) { tok = m[1]; }
+      if (!tok) return;
+      var asBool = Y11_TRUE[tok] ? "true" : "false";
+      var subject = key ? ("“" + key + "” is set to " + tok) : ("a list item is " + tok);
+      add("WARN","yaml11-bool", subject + ", which this tool (js-yaml, YAML 1.2) reads as the text “" + tok + "”. ASF applies .asf.yaml with a Python (YAML 1.1) parser, where " + tok + " is the boolean " + asBool + " — so the two can disagree. Write " + asBool + " for a boolean, or quote it (\"" + tok + "\") to force the string.","asfyaml schema · YAML 1.1 vs 1.2 booleans");
+    });
+  }
+
+  // Nested sub-key typo detection (WARN-only). Walks the parsed doc against the
+  // same SCHEMA descriptor that drives the Builder form (single source — no
+  // separate key list). Only the BLOCKS' modeled, closed key sets are checked;
+  // anything genuinely open is exempted so we don't false-alarm:
+  //   • rulesets entries (raw GitHub payloads) are skipped entirely;
+  //   • kvmap keys are only checked when the field has a fixed keyEnum
+  //     (custom_subjects); free-form maps (commits_by_path, file_tag_mappings) are
+  //     left alone;
+  //   • notifications' documented bot schemes (pullrequests_bot_*, issues_bot_*)
+  //     are allowed.
+  // It only ever emits WARN (the schema is a work in progress), so it can never
+  // turn a good file into a FAIL — at worst it nudges about a likely typo.
+  function fieldMap(fields){ var m={}; for(var i=0;i<fields.length;i++) m[fields[i].key]=fields[i]; return m; }
+  function checkSubkeys(obj, fields, label, add, blockKey){
+    if (!isPlainObject(obj) || !fields) return;
+    var known = fieldMap(fields);
+    Object.keys(obj).forEach(function(k){
+      if (blockKey === "notifications" && /^(pullrequests|issues)_bot_.+$/.test(k)) return;
+      var f = known[k];
+      if (!f){
+        add("WARN","unknown-subkey","Unknown key “" + k + "” under “" + label + "”. The schema is a work in progress, but this is most often a typo that silently disables the setting.","asfyaml schema · " + blockKey);
+        return;
+      }
+      descendSubkeys(obj[k], f, label + "." + k, add, blockKey);
+    });
+  }
+  function descendSubkeys(val, field, label, add, blockKey){
+    var t = field.type;
+    if (t === "group"){ checkSubkeys(val, field.fields, label, add, blockKey); }
+    else if (t === "mapgroup"){ if (isPlainObject(val)){ Object.keys(val).forEach(function(name){ checkSubkeys(val[name], field.fields, label + "." + name, add, blockKey); }); } }
+    else if (t === "listgroup"){ if (Array.isArray(val)){ val.forEach(function(item,i){ checkSubkeys(item, field.fields, label + "[" + (i+1) + "]", add, blockKey); }); } }
+    else if (t === "kvmap"){ if (field.keyEnum && isPlainObject(val)){ var ke=fieldMap(field.keyEnum.map(function(x){return {key:x};})); Object.keys(val).forEach(function(k){ if (!ke[k]) add("WARN","unknown-subkey","Unknown event “" + k + "” under “" + label + "” (expected one of the documented GitHub events). Most often a typo.","asfyaml schema · " + blockKey); }); } }
+    // rulesets / list / scalar / jiraopts / boolLocal: nothing further to check.
+  }
+  function lintUnknownSubkeys(doc, add){
+    SCHEMA.forEach(function(block){
+      if (!has(doc, block.key) || !block.fields) return;
+      checkSubkeys(doc[block.key], block.fields, block.key, add, block.key);
+    });
+  }
 
   function finalize(findings, parsed){
     var verdict = "PASS";
@@ -652,10 +733,10 @@
         f("doap","text",{help:"Link a DOAP file instead of inline metadata. https under apache.org or raw.githubusercontent.com/apache; no redirects."})
       ]}),
       f("policy","group",{label:"policy", help:"How ATR runs your project's releases, votes, and announcements. Every field is optional.", fields:[
-        f("vote_mode","enum",{options:["","manual","email","trusted"], help:"How a release vote is conducted: manual, email, or trusted. Mutually exclusive with manual_vote."}),
+        f("vote_mode","enum",{options:[""].concat(VOTE_MODES), help:"How a release vote is conducted: manual, email, or trusted. Mutually exclusive with manual_vote."}),
         f("manual_vote","bool",{help:"Conduct the release vote manually. Mutually exclusive with vote_mode."}),
         f("min_hours","int",{help:"Minimum hours a release vote must stay open."}),
-        f("license_check_mode","enum",{options:["","Both","Lightweight","RAT"], help:"Which license check(s) to run: Both, Lightweight, or RAT."}),
+        f("license_check_mode","enum",{options:[""].concat(LICENSE_MODES), help:"Which license check(s) to run: Both, Lightweight, or RAT."}),
         f("preserve_download_files","bool",{help:"Keep download files after a release completes."}),
         f("source_artifact_paths","list",{help:"Globs identifying source artifacts."}), f("binary_artifact_paths","list",{help:"Globs identifying binary artifacts."}),
         f("source_excludes_lightweight","list",{help:"Globs excluded from the lightweight license check."}), f("source_excludes_rat","list",{help:"Globs excluded from the RAT license check."}),
@@ -709,13 +790,13 @@
       f("autolink_jira","list",{help:"UPPERCASE Jira project keys"}),
       f("dependabot_alerts","bool"), f("dependabot_updates","bool"),
       f("ghp_branch","text",{help:"your default branch or gh-pages"}),
-      f("ghp_path","enum",{options:["","/docs","/"]}),
+      f("ghp_path","enum",{options:[""].concat(GHP_PATHS)}),
       f("del_branch_on_merge","bool",{deprecated:"moved to pull_requests.del_branch_on_merge"}),
       f("pull_requests","group",{label:"pull_requests", fields:[ f("allow_auto_merge","bool",{help:"Allow PRs to auto-merge once requirements are met."}), f("allow_update_branch","bool",{help:"Allow updating a PR's branch with the latest base branch."}), f("del_branch_on_merge","bool",{help:"Automatically delete the head branch after a PR merges."}) ]}),
       f("features","group",{label:"features", fields:[ f("wiki","bool",{help:"Enable the repository wiki."}), f("issues","bool",{help:"Enable the issue tracker."}), f("projects","bool",{help:"Enable project boards."}), f("discussions","bool",{help:"Enable GitHub Discussions (needs a notifications.discussions target)."}) ]}),
       f("enabled_merge_buttons","group",{label:"enabled_merge_buttons", help:"Which merge buttons GitHub offers. At least one of squash / merge / rebase must be on.", fields:[
-        f("squash","bool",{help:"Allow squash-and-merge."}), f("squash_commit_message","enum",{options:["","DEFAULT","PR_TITLE","PR_TITLE_AND_COMMIT_DETAILS","PR_TITLE_AND_DESC"], help:"Default commit message used for squash merges."}),
-        f("merge","bool",{help:"Allow a standard merge commit."}), f("merge_commit_message","enum",{options:["","DEFAULT","PR_TITLE","PR_TITLE_AND_DESC"], help:"Default commit message used for merge commits."}),
+        f("squash","bool",{help:"Allow squash-and-merge."}), f("squash_commit_message","enum",{options:[""].concat(SQUASH_MSG), help:"Default commit message used for squash merges."}),
+        f("merge","bool",{help:"Allow a standard merge commit."}), f("merge_commit_message","enum",{options:[""].concat(MERGE_MSG), help:"Default commit message used for merge commits."}),
         f("rebase","bool",{help:"Allow rebase-and-merge."})
       ]}),
       f("protected_branches","mapgroup",{label:"protected_branches", nameLabel:"branch", help:"Branch-protection rules keyed by branch name. Setting required status checks on the default branch can lock you out.", fields:[
@@ -899,7 +980,14 @@
     "expected": "PASS",
     "note": "default-branch protection via convenience ruleset",
     "yaml": "# EXPECTED: PASS\n# GitHub ruleset for default branch protection (convenience syntax).\n# Mirrors apache/infrastructure-github-merge-queue-notifier#1: protect the default\n# branch plus release/* and rel/*, restrict deletion & force-push, and require one\n# PR review. Convenience syntax only (no raw-payload keys), so asfyaml hardcodes\n# enforcement: active.\ngithub:\n  rulesets:\n    - name: \"Default Branch Protection\"\n      type: branch\n      branches:\n        includes:\n          - \"~DEFAULT_BRANCH\"\n          - \"release/*\"\n          - \"rel/*\"\n        excludes: []\n      bypass_teams:\n        - root\n      restrict_deletion: true\n      restrict_force_push: true\n      required_pull_request_reviews:\n        dismiss_stale_reviews: true\n        require_last_push_approval: false\n        required_approving_review_count: 1\n"
-  }
+  },
+  {"id":"warn-yaml11-bool","expected":"WARN","note":"yaml11 bool: unquoted yes/off read as strings here, booleans on the server","yaml":"# EXPECTED: WARN\n# YAML 1.1 vs 1.2 footgun. `yes` / `off` are written unquoted, so this tool\n# (js-yaml, YAML 1.2 core schema) reads them as the strings \"yes\" / \"off\". ASF\n# applies .asf.yaml with a Python (YAML 1.1) parser, where the same tokens are\n# the booleans true / false. The two parsers disagree, so the tool WARNs and\n# tells you to write true/false or quote the value.\ngithub:\n  dependabot_alerts: yes\n  dependabot_updates: off\n"},
+  {"id":"warn-yaml11-bool-discussions","expected":"WARN","note":"yaml11 bool: discussions: on read as string, surfaced by the 1.1/1.2 check","yaml":"# EXPECTED: WARN\n# `discussions: on` reads as the string \"on\" in YAML 1.2, so the engine's\n# \"discussions needs a notifications target\" rule (which looks for the boolean\n# true) can't see it — without this check the file would look clean. The YAML\n# 1.1/1.2 warning surfaces it: on a YAML 1.1 server, discussions IS enabled and\n# would require a notifications.discussions target.\ngithub:\n  features:\n    discussions: on\n"},
+  {"id":"good-yaml11-quoted","expected":"PASS","note":"yaml11: quoted \"yes\" + true/false are unambiguous, must not warn","yaml":"# EXPECTED: PASS\n# The flip side of warn-yaml11-bool: quoting forces a string in BOTH YAML 1.1 and\n# 1.2, so \"yes\" is unambiguous and must NOT warn. `true` / `false` are booleans\n# in every YAML version, so they never warn either. This pins that the 1.1/1.2\n# check only fires on the genuinely-ambiguous *unquoted* tokens.\ngithub:\n  description: \"yes\"\n  enabled_merge_buttons:\n    squash: true\n    merge: false\n"},
+  {"id":"warn-nested-subkey","expected":"WARN","note":"nested sub-key typo: github.feature should be features","yaml":"# EXPECTED: WARN\n# Nested sub-key typo detection. `feature` should be `features` — a one-level-down\n# typo that the top-level unknown-key check can't see (it only guards the very top\n# level). The Builder's SCHEMA descriptor is the single source for which sub-keys\n# are known, so this WARNs. It never FAILs: the schema is a work in progress, so an\n# unrecognised sub-key is \"probably a typo\", not \"definitely invalid\".\ngithub:\n  feature:\n    discussions: true\n"},
+  {"id":"good-notifications-bot","expected":"PASS","note":"bot schemes / _status splits are valid notification keys","yaml":"# EXPECTED: PASS\n# The flip side of warn-nested-subkey: documented bot schemes\n# (pullrequests_bot_*, issues_bot_*) and the _status / _comment splits are valid\n# notification keys, NOT typos — they must not warn. This pins that the nested\n# sub-key check exempts the open notification patterns so it doesn't false-alarm.\nnotifications:\n  commits: commits@foo.apache.org\n  pullrequests: issues@foo.apache.org\n  pullrequests_bot_dependabot: private@foo.apache.org\n  issues_status: dev@foo.apache.org\n"},
+  {"id":"warn-pelican-autobuild","expected":"WARN","note":"pelican.autobuild malformed glob (missing /*)","yaml":"# EXPECTED: WARN\n# pelican.autobuild uses the same `$foo/*` glob form as staging.autostage. Here\n# `site` is missing the trailing `/*`, so it won't match any branches — the tool\n# flags the malformed glob (WARN; the rest of the block is fine).\npelican:\n  whoami: main\n  target: asf-site\n  autobuild: site\n"},
+  {"id":"good-pelican","expected":"PASS","note":"well-formed pelican autobuild site/*","yaml":"# EXPECTED: PASS\n# A well-formed Pelican auto-build: `site/*` matches the $foo/* form and every key\n# in the block is recognised, so nothing should warn.\npelican:\n  whoami: main\n  target: asf-site\n  autobuild: site/*\n"}
 ];
   var BUILDER_FIXTURES  = [
   {
@@ -1129,6 +1217,10 @@
     "note": "reused validator fixture (convenience ruleset round-trips losslessly)",
     "yaml": "# EXPECTED: PASS\n# GitHub ruleset for default branch protection (convenience syntax).\n# Mirrors apache/infrastructure-github-merge-queue-notifier#1: protect the default\n# branch plus release/* and rel/*, restrict deletion & force-push, and require one\n# PR review. Convenience syntax only (no raw-payload keys), so asfyaml hardcodes\n# enforcement: active.\ngithub:\n  rulesets:\n    - name: \"Default Branch Protection\"\n      type: branch\n      branches:\n        includes:\n          - \"~DEFAULT_BRANCH\"\n          - \"release/*\"\n          - \"rel/*\"\n        excludes: []\n      bypass_teams:\n        - root\n      restrict_deletion: true\n      restrict_force_push: true\n      required_pull_request_reviews:\n        dismiss_stale_reviews: true\n        require_last_push_approval: false\n        required_approving_review_count: 1\n"
   },
+  {"id":"rt-warn-nested-subkey","kind":"roundtrip","note":"nested sub-key typo: github.feature should be features","yaml":"# EXPECTED: WARN\n# Nested sub-key typo detection. `feature` should be `features` — a one-level-down\n# typo that the top-level unknown-key check can't see (it only guards the very top\n# level). The Builder's SCHEMA descriptor is the single source for which sub-keys\n# are known, so this WARNs. It never FAILs: the schema is a work in progress, so an\n# unrecognised sub-key is \"probably a typo\", not \"definitely invalid\".\ngithub:\n  feature:\n    discussions: true\n"},
+  {"id":"rt-good-notifications-bot","kind":"roundtrip","note":"bot schemes / _status splits are valid notification keys","yaml":"# EXPECTED: PASS\n# The flip side of warn-nested-subkey: documented bot schemes\n# (pullrequests_bot_*, issues_bot_*) and the _status / _comment splits are valid\n# notification keys, NOT typos — they must not warn. This pins that the nested\n# sub-key check exempts the open notification patterns so it doesn't false-alarm.\nnotifications:\n  commits: commits@foo.apache.org\n  pullrequests: issues@foo.apache.org\n  pullrequests_bot_dependabot: private@foo.apache.org\n  issues_status: dev@foo.apache.org\n"},
+  {"id":"rt-warn-pelican-autobuild","kind":"roundtrip","note":"pelican.autobuild malformed glob (missing /*)","yaml":"# EXPECTED: WARN\n# pelican.autobuild uses the same `$foo/*` glob form as staging.autostage. Here\n# `site` is missing the trailing `/*`, so it won't match any branches — the tool\n# flags the malformed glob (WARN; the rest of the block is fine).\npelican:\n  whoami: main\n  target: asf-site\n  autobuild: site\n"},
+  {"id":"rt-good-pelican","kind":"roundtrip","note":"well-formed pelican autobuild site/*","yaml":"# EXPECTED: PASS\n# A well-formed Pelican auto-build: `site/*` matches the $foo/* form and every key\n# in the block is recognised, so nothing should warn.\npelican:\n  whoami: main\n  target: asf-site\n  autobuild: site/*\n"},
   {
     "id": "edit-ruleset-includes",
     "kind": "edit",
@@ -1257,6 +1349,8 @@
     lintAsfYaml: lintAsfYaml, runFixtures: runFixtures,
     EMBEDDED_FIXTURES: EMBEDDED_FIXTURES,
     SCHEMA: SCHEMA, RULESET_CONV_FIELDS: RULESET_CONV_FIELDS,
+    RULESET_RAW_KEYS: RULESET_RAW_KEYS, RULESET_CONV_KEYS: RULESET_CONV_KEYS,
+    VOTE_MODES: VOTE_MODES, LICENSE_MODES: LICENSE_MODES, SQUASH_MSG: SQUASH_MSG, MERGE_MSG: MERGE_MSG, GHP_PATHS: GHP_PATHS,
     buildYaml: buildYaml, importYaml: importYaml, deepEqual: deepEqual,
     runBuilderFixtures: runBuilderFixtures, BUILDER_FIXTURES: BUILDER_FIXTURES,
     setPath: setPath, getPath: getPath, delPath: delPath,
@@ -1687,7 +1781,7 @@
     det.appendChild(treeSummary(field, path, removable));
     var body=node("div","tbody");
     var arr=getPath(builderModel, path); if(!Array.isArray(arr)) arr=[];
-    var RAWKEYS=["target","conditions","rules","bypass_actors","enforcement"];
+    var RAWKEYS=A.RULESET_RAW_KEYS;   // single-sourced from the engine (no fork)
     arr.forEach(function(item, idx){
       var isRaw=RAWKEYS.some(function(k){ return item && typeof item==="object" && (k in item); });
       var edet=treeDetails(pk(path.concat(idx)));

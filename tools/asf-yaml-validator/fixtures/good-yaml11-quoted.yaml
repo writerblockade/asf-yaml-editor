@@ -1,0 +1,10 @@
+# EXPECTED: PASS
+# The flip side of warn-yaml11-bool: quoting forces a string in BOTH YAML 1.1 and
+# 1.2, so "yes" is unambiguous and must NOT warn. `true` / `false` are booleans
+# in every YAML version, so they never warn either. This pins that the 1.1/1.2
+# check only fires on the genuinely-ambiguous *unquoted* tokens.
+github:
+  description: "yes"
+  enabled_merge_buttons:
+    squash: true
+    merge: false

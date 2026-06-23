@@ -2,10 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/REPLACE_ME/asf-yaml-schema/main/asf-yaml.schema.json",
   "title": ".asf.yaml",
-  "description": "Apache Software Foundation per-repository configuration file (.asf.yaml). Drafted from the public documentation at https://github.com/apache/infrastructure-asfyaml (snapshot 2026-06-19). STRUCTURAL validation only: it checks key names, types, and allowed values. Cross-field and policy rules (e.g. the branch-protection lockout, vote_mode vs manual_vote, 'discussions needs a notification target') are NOT expressible in JSON Schema and are handled by the companion Lint Catcher tool. The authoritative interpreter (asfyaml.py) is non-public, so treat unknown-key errors as 'likely a typo' rather than 'definitely invalid'.",
+  "description": "Apache Software Foundation per-repository configuration file (.asf.yaml). Drafted from the public documentation at https://github.com/apache/infrastructure-asfyaml (snapshot 2026-06-22). STRUCTURAL validation only: it checks key names, types, and allowed values. Cross-field and policy rules (e.g. the branch-protection lockout, vote_mode vs manual_vote, 'discussions needs a notification target') are NOT expressible in JSON Schema and are handled by the companion Lint Catcher tool. The authoritative interpreter (asfyaml.py) is non-public, so treat unknown-key errors as 'likely a typo' rather than 'definitely invalid'.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "meta": { "$ref": "#/$defs/meta" },
     "project": { "$ref": "#/$defs/project" },
     "notifications": { "$ref": "#/$defs/notifications" },
     "staging": { "$ref": "#/$defs/staging" },
@@ -16,6 +17,15 @@
     "jenkins": { "$ref": "#/$defs/jenkins" }
   },
   "$defs": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Selects the .asf.yaml environment. Use 'environment' (single) OR 'environments' (list). See docs/ASFYamlFeature.md. Cross-field rules are checked by Lint Catcher.",
+      "properties": {
+        "environment": { "type": "string" },
+        "environments": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "emailTarget": {
       "type": "string",
       "description": "A mailing-list or notification email address (or space-separated options for jira_options)."

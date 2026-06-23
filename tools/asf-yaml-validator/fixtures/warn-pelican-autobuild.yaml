@@ -1,0 +1,8 @@
+# EXPECTED: WARN
+# pelican.autobuild uses the same `$foo/*` glob form as staging.autostage. Here
+# `site` is missing the trailing `/*`, so it won't match any branches — the tool
+# flags the malformed glob (WARN; the rest of the block is fine).
+pelican:
+  whoami: main
+  target: asf-site
+  autobuild: site

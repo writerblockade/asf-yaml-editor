@@ -1,0 +1,9 @@
+# EXPECTED: WARN
+# Nested sub-key typo detection. `feature` should be `features` — a one-level-down
+# typo that the top-level unknown-key check can't see (it only guards the very top
+# level). The Builder's SCHEMA descriptor is the single source for which sub-keys
+# are known, so this WARNs. It never FAILs: the schema is a work in progress, so an
+# unrecognised sub-key is "probably a typo", not "definitely invalid".
+github:
+  feature:
+    discussions: true

@@ -1,0 +1,9 @@
+# EXPECTED: WARN
+# YAML 1.1 vs 1.2 footgun. `yes` / `off` are written unquoted, so this tool
+# (js-yaml, YAML 1.2 core schema) reads them as the strings "yes" / "off". ASF
+# applies .asf.yaml with a Python (YAML 1.1) parser, where the same tokens are
+# the booleans true / false. The two parsers disagree, so the tool WARNs and
+# tells you to write true/false or quote the value.
+github:
+  dependabot_alerts: yes
+  dependabot_updates: off

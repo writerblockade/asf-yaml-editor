@@ -23,6 +23,13 @@ the exact same rule engine the paste box uses and asserts these verdicts.
 | `good-meta.yaml` | **PASS** | `meta` is a valid top-level section (environment select) |
 | `bad-meta-type.yaml` | **FAIL** | `meta` must be a mapping, not a scalar |
 | `good-rulesets-default.yaml` | **PASS** | default-branch protection via convenience ruleset (no raw keys) |
+| `warn-yaml11-bool.yaml` | **WARN** | unquoted `yes`/`off` — YAML 1.1 (server) vs 1.2 (this tool) booleans |
+| `warn-yaml11-bool-discussions.yaml` | **WARN** | `discussions: on` reads as a string here; the 1.1/1.2 check surfaces it |
+| `good-yaml11-quoted.yaml` | **PASS** | quoted `"yes"` and `true`/`false` are unambiguous — must not warn |
+| `warn-nested-subkey.yaml` | **WARN** | nested sub-key typo (`github.feature` → `features`) |
+| `good-notifications-bot.yaml` | **PASS** | bot schemes / `_status` splits are valid notification keys (no false warn) |
+| `warn-pelican-autobuild.yaml` | **WARN** | `pelican.autobuild` malformed glob (missing `/*`) |
+| `good-pelican.yaml` | **PASS** | well-formed `pelican.autobuild: site/*` |
 
 Verdict ordering: **FAIL > WARN > PASS**. A file with any FAIL is FAIL; a file
 with at least one WARN and no FAIL is WARN; a file with only PASS/INFO is PASS.

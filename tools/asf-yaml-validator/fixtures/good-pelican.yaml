@@ -1,0 +1,7 @@
+# EXPECTED: PASS
+# A well-formed Pelican auto-build: `site/*` matches the $foo/* form and every key
+# in the block is recognised, so nothing should warn.
+pelican:
+  whoami: main
+  target: asf-site
+  autobuild: site/*

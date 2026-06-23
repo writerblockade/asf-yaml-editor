@@ -39,4 +39,4 @@ Brianna is going through treatment and recovery for cancer. The best way to
 support me in this project is to support my sister. If you're able to provide
 financial help, go to
 [Team Bri: Joining Bri on her Healing Journey](https://www.gofundme.com/f/team-bri-joining-bri-on-her-healing-journey)
-on GoFundMe. Obviously this is entirely optional. Thank you for reading!
+on GoFundMe. Completely optional and completely appreciated. Thank you for reading!

@@ -1,0 +1,10 @@
+# EXPECTED: PASS
+# The flip side of warn-nested-subkey: documented bot schemes
+# (pullrequests_bot_*, issues_bot_*) and the _status / _comment splits are valid
+# notification keys, NOT typos — they must not warn. This pins that the nested
+# sub-key check exempts the open notification patterns so it doesn't false-alarm.
+notifications:
+  commits: commits@foo.apache.org
+  pullrequests: issues@foo.apache.org
+  pullrequests_bot_dependabot: private@foo.apache.org
+  issues_status: dev@foo.apache.org

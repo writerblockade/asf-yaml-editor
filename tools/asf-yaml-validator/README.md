@@ -53,7 +53,8 @@ Only **Import from a repo** reaches the network.)
   vs raw-payload syntax within a single `github.rulesets` entry.
 - Limits: `collaborators` ≤ 10, `labels` ≤ 20, and at least one of
   `enabled_merge_buttons` squash/merge/rebase must be true.
-- `staging.autostage` must be of the `$foo/*` form.
+- `staging.autostage` and `pelican.autobuild` must be of the `$foo/*` form
+  (e.g. `site/*`).
 
 **Footguns / high-risk warnings (the real value)**
 
@@ -70,6 +71,22 @@ Only **Import from a repo** reaches the network.)
 - Deprecated keys ⇒ WARN: top-level `github.del_branch_on_merge` (moved under
   `pull_requests`), `github.protected_tags` (GitHub tag protection sunset Feb
   2024), and `jenkins` / `github_whitelist`.
+- **Nested sub-key typos ⇒ WARN.** Beyond the top-level typo catch, the tool also
+  flags an unrecognised key *one level down* inside a modeled block — e.g.
+  `github.feature` (should be `features`) or `notifications.commit` (should be
+  `commits`) — using the Builder's own schema descriptor as the single source of
+  known keys. It stays WARN-only (the schema is a work in progress) and exempts the
+  genuinely open spots: raw `rulesets` payloads, free-form maps (`commits_by_path`),
+  and documented bot schemes (`pullrequests_bot_*`).
+- **YAML 1.1 vs 1.2 booleans ⇒ WARN.** An unquoted `yes` / `no` / `on` / `off`
+  is a **string** to this tool (js-yaml follows YAML 1.2), but ASF applies
+  `.asf.yaml` with a Python (YAML 1.1) parser where those tokens are **booleans**
+  — so `enabled_merge_buttons.squash: yes` or `features.discussions: on` can mean
+  different things to the tool and the server. The tool flags every unquoted
+  occurrence and tells you to write `true`/`false` or quote it. Quoted values
+  (`"yes"`) and `true`/`false` are unambiguous and never warn. (The Build tab's
+  output already quotes these tokens on emit, so this footgun only bites
+  hand-written / pasted files.)
 
 Optional inputs (default branch, repo name, the branch the file lives in, and
 your real CI check names) sharpen a few checks. They are all optional; leave
@@ -109,8 +126,13 @@ Open **Build** to assemble an `.asf.yaml` without hand-writing YAML:
   `features.discussions` without a notification target shows the FAIL
   immediately; default-branch required checks show the lockout WARN).
 - **Import to edit.** Paste an existing file (or click *Edit in Builder* from the
-  Validate tab); the controls populate, and keys the form doesn't model ride
-  along in the Advanced section and re-emit exactly.
+  Validate tab); the controls populate, and any key the form doesn't model is
+  preserved verbatim and re-emitted exactly — so nothing is dropped. Note where
+  it shows up: an unmodeled **top-level** key appears in the **Advanced** box you
+  can edit; an unmodeled **nested** key (e.g. a future `github.*` sub-key) rides
+  along in the output but isn't surfaced as its own control. One thing that does
+  **not** survive a round-trip: **YAML comments** — `js-yaml` drops them when it
+  re-emits, so an import-then-export loses any `#` comments (the data is intact).
 - **Output is copy / download only.** A read-only pane with **Copy** and
   **Download .asf.yaml**. Both just hand you generated text — you commit it to
   your repo yourself. The tool never touches your repo.
@@ -172,12 +194,12 @@ section it came from. Re-check the source above when upstream changes.
 
 ## How each rule was tested (the fixtures)
 
-Fixtures were written **before** the logic. The `fixtures/` folder holds 16
+Fixtures were written **before** the logic. The `fixtures/` folder holds 23
 known-good / known-bad `.asf.yaml` files, each with a `# EXPECTED:` header and
 listed in `fixtures/EXPECTED.md`. The tool's **Run fixtures (self-test)** button
 runs every fixture through the exact same engine the paste box uses and asserts
 each produces its expected overall verdict (FAIL > WARN > PASS). The tool is
-"correct" only when all 16 match.
+"correct" only when all 23 match.
 
 | Fixture | Expected | Targets |
 |---|---|---|
@@ -197,10 +219,18 @@ each produces its expected overall verdict (FAIL > WARN > PASS). The tool is
 | `good-meta.yaml` | PASS | `meta` environment select |
 | `bad-meta-type.yaml` | FAIL | `meta` must be a mapping |
 | `good-rulesets-default.yaml` | PASS | default-branch protection via convenience ruleset |
+| `warn-yaml11-bool.yaml` | WARN | unquoted `yes`/`off` (YAML 1.1 vs 1.2) |
+| `warn-yaml11-bool-discussions.yaml` | WARN | `discussions: on` reads as a string here |
+| `good-yaml11-quoted.yaml` | PASS | quoted `"yes"` + `true`/`false` never warn |
+| `warn-nested-subkey.yaml` | WARN | nested sub-key typo (`github.feature`) |
+| `good-notifications-bot.yaml` | PASS | bot schemes are valid keys (no false warn) |
+| `warn-pelican-autobuild.yaml` | WARN | `pelican.autobuild` malformed glob |
+| `good-pelican.yaml` | PASS | well-formed `pelican.autobuild: site/*` |
 
-The same engine and fixtures are also verifiable headlessly with `node` (the
-build/verify scripts live outside this folder); the in-page self-test is the
-authoritative record for the owner. Current status: **16 / 16 passing.**
+The same engine and fixtures are also verifiable headlessly with `node` — run
+[`scripts/verify.js`](../../scripts/verify.js) from the repo root (`node
+scripts/verify.js`; no install needed for the core checks). The in-page self-test
+is the authoritative record for the owner. Current status: **23 / 23 passing.**
 
 ### How the Build tab was tested
 
@@ -214,9 +244,12 @@ fixtures (self-test)** button runs three suites:
 - **Round-trip / no-data-loss** — a file → import → emit → import again must be
   **deep-equal** with zero keys dropped, and the validator verdict must be
   unchanged. 5 dedicated stress files (raw rulesets payload, environments,
-  custom_subjects, unknown keys, kitchen-sink) **plus all parseable validator
+  custom_subjects, unknown keys, kitchen-sink) **plus the parseable validator
   fixtures reused**, so the builder is proven lossless on the very files the
-  validator is tested against.
+  validator is tested against. (The three `*-yaml11-*` fixtures are
+  validation-only: emit deliberately *quotes* the ambiguous `yes`/`on` token, so
+  the round-trip verdict changes by design — data is still preserved, the
+  ambiguity is resolved — and the verdict-stability assertion would not hold.)
 - **Edit fixtures** (`edit-fixtures.json`) — replay a sequence of form edits
   through the same `setPath`/`delPath` the UI uses and assert the resulting model
   deep-equals expected. These guard the bug where editing a value **nested under
@@ -228,8 +261,8 @@ The remaining form-widget wiring is verified by behavior with a headless DOM
 preserves unknown top-level *and* nested keys, the emitted pane matches
 `buildYaml`, **Import from a repo** builds the right raw URL and feeds both tabs
 (with a working `file://` fallback), and live validation surfaces the expected
-findings. Current status: **emit 6/6, round-trip 20/20, edit 2/2**, validator
-**16/16** — all green in one self-test.
+findings. Current status: **emit 6/6, round-trip 24/24, edit 2/2**, validator
+**23/23** — all green in one self-test.
 
 ## Out of scope
 

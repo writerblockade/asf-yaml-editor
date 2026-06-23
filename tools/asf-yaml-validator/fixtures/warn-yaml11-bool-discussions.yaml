@@ -1,0 +1,9 @@
+# EXPECTED: WARN
+# `discussions: on` reads as the string "on" in YAML 1.2, so the engine's
+# "discussions needs a notifications target" rule (which looks for the boolean
+# true) can't see it — without this check the file would look clean. The YAML
+# 1.1/1.2 warning surfaces it: on a YAML 1.1 server, discussions IS enabled and
+# would require a notifications.discussions target.
+github:
+  features:
+    discussions: on
