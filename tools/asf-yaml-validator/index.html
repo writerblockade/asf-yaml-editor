@@ -17,10 +17,51 @@
     --accent:#b58e54; --accent2:#a3a0d0; --on-fill:#0a0b11;   /* bronze = primary (buttons/links); warm-slate = secondary highlight; near-black label on filled buttons */
     --pass:#2ea043; --warn:#e0823a; --fail:#f85149;   /* green = PASS verdict only; warn is orange so it stays distinct from the bronze accent */
     /* shape + type tokens — single source; change here, not per-rule */
-    --radius:8px; --radius-sm:5px;
+    --radius:8px; --radius-sm:5px; --hover-filter:brightness(1.12);   /* interactive hover brighten (dark mode = lighten) */
+    --hover-ring-col:rgba(255,255,255,.34); --hover-ring:inset 0 0 0 2px var(--hover-ring-col); --hover-ring-thin:inset 0 0 0 1px var(--hover-ring-col);   /* dark hover rims */
     --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:20px; --fs-xl:26px;
     --font:'Spline Sans',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --mono:'Spline Sans Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  /* ===== LIGHT THEME ("warm paper") — same night-palette hues, AA-verified. Applied via [data-theme=light];
+     a head script defaults it to the visitor's OS (prefers-color-scheme), the header toggle overrides for the session. ===== */
+  :root[data-theme="light"]{
+    --bg:#f4f3f0; --panel:#ffffff; --panel2:#eceae5; --line:#ccc9c0; --ink:#20242b; --muted:#62666e;
+    --accent:#7d5a26; --accent2:#565591; --on-fill:#ffffff;   /* dark bronze; WHITE label on filled buttons in light */
+    --pass:#1a7f37; --warn:#9a540c; --fail:#bd2e28; --hover-filter:brightness(.94);   /* light mode = darken slightly (can't brighten white) */
+    --hover-ring-col:rgba(0,0,0,.22); --hover-ring:inset 0 0 0 2px var(--hover-ring-col); --hover-ring-thin:inset 0 0 0 1px var(--hover-ring-col);   /* light hover rims */
+  }
+  [data-theme="light"] .disclaimer,[data-theme="light"] .yield{background:#fdf4e3;border-color:#e3cd96;color:#6e5212}
+  [data-theme="light"] .disclaimer b{color:#4a3a0e}
+  [data-theme="light"] .yield.active{background:#f3e3bd;border-color:#caa84e;color:#4a3a0e}
+  [data-theme="light"] .summary.PASS{background:#e9f4ec;border-color:var(--pass);color:#145e2a}
+  [data-theme="light"] .summary.WARN{background:#fbf0e2;border-color:var(--warn);color:#7a430a}
+  [data-theme="light"] .summary.FAIL{background:#fceceb;border-color:var(--fail);color:#9c2723}
+  [data-theme="light"] .badge.PASS{background:#e9f4ec;color:#176e32;border-color:var(--pass)}
+  [data-theme="light"] .badge.WARN{background:#fbf0e2;color:#7a430a;border-color:var(--warn)}
+  [data-theme="light"] .badge.FAIL{background:#fceceb;color:#9c2723;border-color:var(--fail)}
+  [data-theme="light"] .badge.INFO{background:#eceae5;color:#62666e;border-color:#ccc9c0}
+  [data-theme="light"] .deprChip{background:#fceceb;color:#9c2723;border-color:#e7a59f}
+  [data-theme="light"] .branchChip{background:#eceae5;color:#62666e;border-color:#d3d0c8}
+  [data-theme="light"] .infraChip{background:#ecebf6;color:#454389;border-color:#c7c5e6}
+  [data-theme="light"] .outpane,[data-theme="light"] code,[data-theme="light"] .f-meta code,[data-theme="light"] .desc{background:#f0efe9}
+  [data-theme="light"] .subsec{background:#faf9f6}
+  [data-theme="light"] .entry{border-left-color:#d8d6cf}
+  [data-theme="light"] .blk>.body,[data-theme="light"] .subsec>.body,[data-theme="light"] .tnode>.tbody,
+  [data-theme="light"] .blk>.body>*::before,[data-theme="light"] .subsec>.body>*::before,[data-theme="light"] .tnode>.tbody>*::before{border-color:#d8d6cf}
+  [data-theme="light"] .segbtn.active,[data-theme="light"] button.ghost.active{background:#e7e6f2;color:#20242b}
+
+  .themebtn{flex:0 0 auto;background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:var(--radius);padding:7px 11px;font-size:15px;line-height:1;cursor:pointer;font-weight:700;white-space:nowrap}
+  .themebtn:hover{border-color:var(--accent);color:var(--ink)}
+  .themebtn .ylbl{font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle}
+  /* theme fade: only while .theme-anim is on <html> (added on toggle, removed after 1.5s); honours reduced-motion */
+  @media (prefers-reduced-motion: no-preference){
+    .theme-anim, .theme-anim *, .theme-anim *::before, .theme-anim *::after{
+      transition:background-color 1.5s ease, color 1.5s ease, border-color 1.5s ease, fill 1.5s ease, stroke 1.5s ease !important;
+    }
+    /* preferred path: crossfade the whole old theme into the whole new one (bg + text move together, no mid-fade contrast dip) */
+    ::view-transition-old(root),::view-transition-new(root){animation-duration:1.5s;animation-timing-function:ease}
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:var(--fs-base)/1.5 var(--font)}
@@ -45,10 +86,16 @@
     border-radius:var(--radius);padding:8px 10px;font-size:13px}
   input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   button{background:var(--accent);color:var(--on-fill);border:0;border-radius:var(--radius);padding:10px 14px;font-size:var(--fs-base);
-    font-weight:600;cursor:pointer}
+    font-weight:600;cursor:pointer;transition:filter .15s ease, box-shadow .15s ease}
   button.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
   button.sm{padding:5px 9px;font-size:12px;font-weight:600}
   button:active{transform:translateY(1px)}
+  button:hover, .segbtn:hover{filter:var(--hover-filter)}   /* hover brighten: lightens in dark, darkens in light */
+  button:not(.rmbtn):not(.catitem):not(.catbtn):not(.iconbtn):not(.segbtn):not(.active):hover{box-shadow:var(--hover-ring)}   /* 2px inset rim: standalone buttons + inactive tabs */
+  .modebtn.active:hover{box-shadow:inset 0 2px 0 0 var(--hover-ring-col), inset 2px 0 0 0 var(--hover-ring-col), inset -2px 0 0 0 var(--hover-ring-col)}   /* active tab: rim top/left/right only — bottom stays merged with its panel */
+  .segbtn:hover{box-shadow:var(--hover-ring-thin)}   /* thinner 1px rim on the small segmented control (a 2px rim squared off oddly) */
+  .buildbar .ex:hover{filter:var(--hover-filter)}   /* Import / Reset light up too — their panel2 fill brightens above the bar */
+  details.ctx>summary:hover{background:var(--panel2);box-shadow:var(--hover-ring)}   /* context header reads as clickable */
   .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
 
   /* shared optional-inputs row */
@@ -77,6 +124,7 @@
   .buildbar>*:last-child{border-top-right-radius:var(--radius);border-bottom-right-radius:var(--radius)}
   .buildbar #toggleDesc{background:transparent;border:0;border-radius:var(--radius) 0 0 var(--radius);padding:0 11px;font-size:15px}
   .buildbar #toggleDesc:hover{background:var(--panel2)}
+  .buildbar #toggleDesc.active{background:var(--panel2);color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}   /* info "on": bronze glyph + bronze ring */
   .buildbar .cat{display:inline-flex;height:100%}
   .buildbar .cat .catbtn{height:100%;background:transparent;border:0;border-radius:0;color:var(--ink);padding:0 12px;font-size:13px;font-weight:500}
   .buildbar .cat .catbtn:hover{background:var(--panel2)}
@@ -88,7 +136,7 @@
   .buildbar #addSectionHost .cat{height:auto}
   .buildbar #addSectionHost .catbtn{height:34px;justify-content:center;background:var(--accent);color:var(--on-fill);font-weight:500;padding:0 16px;border-radius:0;
     transition:height .45s cubic-bezier(.4,0,.2,1),border-radius .45s ease,font-size .3s ease}
-  .buildbar #addSectionHost .catbtn:hover{filter:brightness(1.08)}
+  .buildbar #addSectionHost .catbtn:hover{filter:var(--hover-filter)}
   .buildbar #addSectionHost.firstadd{border-left:0}                     /* raised CTA: drop the dividers hugging it */
   .buildbar #addSectionHost.firstadd+*{border-left:0}
   .buildbar #addSectionHost.firstadd .catbtn{height:58px;font-size:15px;border-radius:var(--radius)}   /* raised = rounded standalone button; morphs to square/flush on first add */
@@ -97,8 +145,8 @@
   .modebar{display:flex;gap:8px;margin:10px 0 0;position:relative;z-index:2}
   .modebtn{flex-grow:2;flex-shrink:1;flex-basis:0;background:var(--panel2);border:1px solid var(--line);color:var(--muted);
     border-radius:var(--radius);padding:14px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.02em;margin-bottom:0;
-    transition:flex-grow .35s ease, border-radius .25s ease, margin-bottom .25s ease, background .2s ease, color .2s ease, border-color .2s ease}
-  .modebtn:hover{color:var(--ink)}
+    transition:flex-grow .35s ease, border-radius .25s ease, margin-bottom .25s ease, background .2s ease, color .2s ease, border-color .2s ease, filter .15s ease, box-shadow .15s ease}
+  .modebtn:hover{color:var(--ink);filter:var(--hover-filter)}
   .modebtn.active{flex-grow:3;background:var(--panel);color:var(--ink);border-color:var(--accent2)}  /* active 60% / other 40%; slate = selected */
   /* engaged: standalone buttons settle into tabs flush with the panel */
   .modebar.engaged .modebtn{border-radius:var(--radius) var(--radius) 0 0;margin-bottom:-1px}
@@ -265,6 +313,8 @@
   .ex{color:var(--accent);cursor:pointer;text-decoration:underline;font-size:12px}
   @media print{body{background:#fff;color:#000}.no-print{display:none!important}.card,.tabpanel{border-color:#ccc}}
 </style>
+<script>/* Default theme to the visitor's OS setting (no flash); the header toggle overrides for the session. No storage by design. */
+try{document.documentElement.dataset.theme=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}catch(e){document.documentElement.dataset.theme="dark";}</script>
 </head>
 <body>
 <div class="wrap">
@@ -280,7 +330,10 @@
       <h1>Offline <code>.asf.yaml</code> Validator &amp; Builder</h1>
       <p class="sub">Create, edit, and validate an Apache <code>.asf.yaml</code> &middot; runs in your browser; the only network call is the optional <b>Import from a repo</b> fetch you trigger &middot; schema snapshot: <b id="snapDate">—</b></p>
     </div>
-    <button class="yield no-print" id="yieldBtn" type="button" aria-expanded="false" aria-controls="disclaimer" title="Show / hide the important caveat">&#9888;<span class="ylbl">caveat</span></button>
+    <div style="display:flex;gap:8px;flex:0 0 auto;align-items:flex-start">
+      <button class="themebtn no-print" id="themeBtn" type="button" title="Theme"><svg viewBox="0 -960 960 960" width="18" height="18" fill="currentColor" aria-hidden="true" style="vertical-align:-3px"><path id="themeIcon" d=""/></svg><span class="ylbl" id="themeLbl">Auto</span></button>
+      <button class="yield no-print" id="yieldBtn" type="button" aria-expanded="false" aria-controls="disclaimer" title="Show / hide the important caveat">&#9888;<span class="ylbl">caveat</span></button>
+    </div>
   </div>
 </header>
 
@@ -1433,6 +1486,41 @@
     el("yieldBtn").setAttribute("aria-expanded", show?"true":"false");
     el("yieldBtn").classList.toggle("active", show);
   });
+
+  /* ---- theme toggle: Auto -> Light -> Dark (session-only; head script seeds the initial render from the OS).
+         Auto follows the OS live; Light/Dark pin it for the session. Material Symbols icons inlined (Apache-2.0, no CDN). ---- */
+  (function(){
+    var btn=el("themeBtn"), icon=el("themeIcon"), lbl=el("themeLbl"); if(!btn||!icon) return;
+    var P={
+      light:"M579-381q41-41 41-99t-41-99q-41-41-99-41t-99 41q-41 41-41 99t41 99q41 41 99 41t99-41Zm-240.5 42.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-450H40v-60h160v60Zm720 0H760v-60h160v60ZM450-760v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-99-537 98-99 44 42-99 98-43-41ZM162-205l99-98 42 42-98 99-43-43Zm318-275Z",
+      dark:"M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 90 63 153t153 63q52 0 99-18.5t79-51.5q1 12 1.5 19.5t.5 14.5q0 150-105 255T480-120Zm0-60q109 0 190-67.5T771-406q-25 11-53.67 16.5Q688.67-384 660-384q-114.69 0-195.34-80.66Q384-545.31 384-660q0-24 5-51.5t18-62.5q-98 27-162.5 109.5T180-480q0 125 87.5 212.5T480-180Zm-4-297Z",
+      autoLight:"M479-480ZM40-450v-60h160v60H40Zm410-310v-160h60v160h-60Zm0 720v-160h60v160h-60ZM262-658l-100-97 43-44 96 100-39 41Zm494 496-98-100 41-41 99 98-42 43Zm-551 0-43-43 99-98 42 42-98 99Zm275-118q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q22 0 42 4.5t39 12.5l-22 56q-14-6-28.5-9.5T480-620q-58 0-99 41t-41 99q0 58 41 99t99 41q51 0 90-32.5t48-81.5h60q-10 74-66 124t-132 50Zm87-234 150-385h53l150 385h-56l-43-112H666l-43 112h-56Zm115-159h123l-54-148h-15l-54 148Z",
+      autoDark:"M440-190q59 0 110.5-27.5T641-290q-129-8-220-95.5T330-600q0-17 2.5-34.5T338-669q-65 36-106.5 96T190-440q0 104.17 72.92 177.08Q335.83-190 440-190Zm0 60q-129 0-219.5-90.5T130-440q0-129 90.5-219.5T440-750q-26 32-38 70.5T390-600q0 104.17 72.92 177.08Q535.83-350 640-350q26 0 52-5.5t50-16.5q-24 106-108.5 174T440-130Zm118-394 125.54-356H762l126 356h-72l-28.3-80H658.3L630-524h-72Zm116-130h98l-49-155-49 155ZM421-387Z"
+    };
+    var mq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : {matches:false};
+    var state="auto";   // auto -> light -> dark -> auto
+    function apply(){
+      var eff = (state==="auto") ? (mq.matches?"light":"dark") : state;
+      document.documentElement.setAttribute("data-theme", eff);
+      var key = (state==="auto") ? (eff==="light"?"autoLight":"autoDark") : state;
+      icon.setAttribute("d", P[key]);
+      if(lbl) lbl.textContent = state.charAt(0).toUpperCase()+state.slice(1);
+      var next = state==="auto" ? "Light" : state==="light" ? "Dark" : "Auto";
+      var desc = (state==="auto") ? ("Theme: Auto — follows your system (now "+eff+"). Click for "+next+".")
+                                   : ("Theme: "+(state==="light"?"Light":"Dark")+" (pinned). Click for "+next+".");
+      btn.title=desc; btn.setAttribute("aria-label",desc);
+    }
+    function motionOK(){ return !window.matchMedia || window.matchMedia("(prefers-reduced-motion: no-preference)").matches; }
+    function fade(){ var r=document.documentElement; r.classList.add("theme-anim"); void r.offsetWidth; clearTimeout(r.__themeT); r.__themeT=setTimeout(function(){ r.classList.remove("theme-anim"); }, 1600); }
+    function change(){
+      if(!motionOK()){ apply(); return; }                                  /* reduced motion: instant */
+      if(document.startViewTransition){ document.startViewTransition(apply); }  /* crossfade old<->new as one unit */
+      else { fade(); apply(); }                                            /* fallback: simultaneous colour transition */
+    }
+    btn.addEventListener("click", function(){ state = state==="auto"?"light":state==="light"?"dark":"auto"; change(); });
+    if(mq.addEventListener) mq.addEventListener("change", function(){ if(state==="auto") change(); });
+    apply();   /* initial render — no transition */
+  })();
 
   /* ---- Validate tab ---- */
   var lastValidated=false;
