@@ -187,6 +187,12 @@ you can fetch it yourself and paste. It never writes, commits, or changes anythi
   2026-06-19 snapshot).
 - YAML parse **and serialize**: [`js-yaml` 4.1.0](https://github.com/nodeca/js-yaml),
   bundled inline (MIT). No network access at runtime.
+- UI font: **Spline Sans** + **Spline Sans Mono**
+  ([SIL OFL](https://github.com/SorkinType/SplineSans)), Latin subset embedded
+  inline as base64 — no font CDN, consistent offline. The whole look is driven by
+  CSS tokens (`--font` / `--mono`, the `--accent`/`--bg`… palette, `--radius`,
+  and the `--fs-*` type scale), so restyling is a one-place change. Documented
+  runner-up if ever revisited: Space Grotesk + Space Mono.
 
 The schema is explicitly a moving target, so this rule set is designed to be
 refreshed: unknown keys never hard-fail, and every finding cites the schema
